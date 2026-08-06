@@ -157,6 +157,7 @@
                 <th class="govuk-table__header" scope="col" title="Local date time of received time">Received At</th>
                 <th class="govuk-table__header" scope="col" title="Local date time of last update">Last updated</th>
                 <th class="govuk-table__header" scope="col" title="Re-process the work item">Enqueue</th>
+                <th class="govuk-table__header" scope="col" title="Regenerate and re-process the work item">Regenerate</th>
                 <th class="govuk-table__header" scope="col" title="Delete the work item">Delete</th>
                 @if(isEditable) {
                     <th class="govuk-table__header" scope="col" title="Edit the work item">Edit</th>
@@ -196,6 +197,11 @@
                 <td class="govuk-table__cell">
                     @if(ProcessingStatus.reProcessable.contains(workItem.status)) {
                         <a href="@uk.gov.hmrc.eeittadminfrontend.controllers.routes.WorkItemController.enqueue(destination, pagination.page, workItem.id, workItem.submissionRef)" class="govuk-link">Enqueue</a>
+                    }
+                </td>
+                <td class="govuk-table__cell">
+                    @if(workItem.canRegenerate) {
+                        <a href="@uk.gov.hmrc.eeittadminfrontend.controllers.routes.WorkItemController.requestRegeneration(destination, workItem.id)" class="govuk-link">Regenerate</a>
                     }
                 </td>
                 <td class="govuk-table__cell">

@@ -332,6 +332,14 @@ class GformConnector @Inject() (wsHttp: HttpClientV2, sc: ServicesConfig) {
       .post(url"$gformUrl/destination-work-item/enqueue/$id?destination=${destination.toString}")
       .execute[HttpResponse]
 
+  def regenerateWorkItem(id: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[HttpResponse] =
+    wsHttp
+      .post(url"$gformUrl/destination-work-item/regenerate/$id")
+      .execute[HttpResponse]
+
   def deleteWorkItem(destination: SdesDestination, id: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext

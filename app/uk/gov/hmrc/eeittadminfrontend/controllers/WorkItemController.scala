@@ -52,6 +52,7 @@ class WorkItemController @Inject() (
   workitem_edit_confirmation: uk.gov.hmrc.eeittadminfrontend.views.html.workitem_edit_confirmation,
   workitem_edit_async: uk.gov.hmrc.eeittadminfrontend.views.html.workitem_edit_async,
   workitem_edit_async_diff: uk.gov.hmrc.eeittadminfrontend.views.html.workitem_edit_async_diff,
+  workitem_regenerate: uk.gov.hmrc.eeittadminfrontend.views.html.workitem_regenerate,
   workitem_history: uk.gov.hmrc.eeittadminfrontend.views.html.workitem_history,
   diffConfig: DiffConfig
 )(implicit ec: ExecutionContext)
@@ -107,6 +108,82 @@ class WorkItemController @Inject() (
         }
       }
     }
+
+  def requestRegeneration(destination: SdesDestination, id: String) =
+    authorizedWrite.async { implicit request =>
+      val (pageError, fieldErrors) =
+        request.flash.get("regenerateParamMissing").fold((NoErrors: HasErrors, Map.empty[String, ErrorMessage])) { _ =>
+          (
+            Errors(
+              new components.GovukErrorSummary()(
+                ErrorSummary(
+                  errorList = List(
+                    ErrorLink(
+                      href = Some("#regenerate"),
+                      content = content.Text(request.messages.messages("generic.error.selectOption"))
+                    )
+                  ),
+                  title = content.Text(request.messages.messages("generic.error.selectOption.heading"))
+                )
+              )
+            ),
+            Map(
+              "regenerate" -> ErrorMessage(
+                content = Text(request.messages.messages("generic.error.selectOption"))
+              )
+            )
+          )
+        }
+      gformConnector.getWorkItem(destination, id).map { workItemData =>
+        if (workItemData.canRegenerate)
+          Ok(workitem_regenerate(workItemData, pageError, fieldErrors))
+        else
+          Redirect(routes.WorkItemController.searchWorkItem(destination, 0, None, None))
+            .flashing("failed" -> s"Work-item cannot be regenerated.")
+      }
+    }
+
+  private val formRegenerate: Form[String] = Form(
+    Forms.single(
+      "regenerate" -> Forms.nonEmptyText
+    )
+  )
+
+  def confirmRegeneration(destination: SdesDestination, id: String) = authorizedWrite.async { implicit request =>
+    formRegenerate
+      .bindFromRequest()
+      .fold(
+        _ =>
+          Redirect(
+            routes.WorkItemController.requestRegeneration(destination, id)
+          ).flashing("regenerateParamMissing" -> "true").pure[Future],
+        {
+          case "Yes" =>
+            gformConnector.getWorkItem(destination, id).flatMap { workItemData =>
+              val username = request.retrieval
+              logger.info(
+                s"${username.value} sends a regenerate request for $id, submission id: ${workItemData.submissionRef.value}"
+              )
+              gformConnector.regenerateWorkItem(id).map { response =>
+                val status = response.status
+                if (status >= 200 && status < 300) {
+                  Redirect(routes.WorkItemController.searchWorkItem(destination, 0, None, None))
+                    .flashing(
+                      "success" -> s"Submission successfully regenerated and reprocessed. Submission id: ${workItemData.submissionRef.value}"
+                    )
+                } else {
+                  Redirect(routes.WorkItemController.searchWorkItem(destination, 0, None, None))
+                    .flashing(
+                      "failed" -> s"Unexpected response with id: $id, submission id: ${workItemData.submissionRef.value} : ${response.body}"
+                    )
+                }
+              }
+            }
+          case "No" =>
+            Redirect(routes.WorkItemController.searchWorkItem(destination, 0, None, None)).pure[Future]
+        }
+      )
+  }
 
   def requestRemoval(destination: SdesDestination, id: String) =
     authorizedDelete.async { implicit request =>
