@@ -148,11 +148,6 @@ class GformConnector @Inject() (wsHttp: HttpClientV2, sc: ServicesConfig) {
       .execute[PIIDetailsResponse]
   }
 
-  def getAllSavedVersions(implicit headerCarrier: HeaderCarrier, ec: ExecutionContext): Future[AllSavedVersions] =
-    wsHttp
-      .get(url"$gformUrl/formStatistics/all-saved-versions")
-      .execute[AllSavedVersions]
-
   def getFormCount(
     formTemplateId: FormTemplateId
   )(implicit headerCarrier: HeaderCarrier, ec: ExecutionContext): Future[Seq[VersionStats]] =
