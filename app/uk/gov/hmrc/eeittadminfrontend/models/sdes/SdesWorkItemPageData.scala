@@ -38,7 +38,8 @@ case class SdesWorkItemData(
   status: ProcessingStatus,
   failureCount: Int,
   receivedAt: Instant,
-  updatedAt: Instant
+  updatedAt: Instant,
+  canRegenerate: Boolean = false
 )
 
 object SdesWorkItemData {
